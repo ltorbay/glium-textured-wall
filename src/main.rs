@@ -2,27 +2,26 @@
 extern crate glium;
 
 use std::f32::consts::PI;
+use std::io::Cursor;
 
 #[allow(unused_imports)]
 use glium::{glutin, Surface};
 use glium::glutin::event::DeviceEvent::MouseMotion;
-use std::io::Cursor;
 
 fn main() {
     let event_loop = glutin::event_loop::EventLoop::new();
-    let wb = glutin::window::WindowBuilder::new();
-    let cb = glutin::ContextBuilder::new().with_depth_buffer(24);
-    let display = glium::Display::new(wb, cb, &event_loop).unwrap();
-    let program = glium::Program::from_source(&display, vertex_shader(), fragment_shader(),
-                                              None).unwrap();
+    let window_builder = glutin::window::WindowBuilder::new();
+    let context_builder = glutin::ContextBuilder::new().with_depth_buffer(24);
+    let display = glium::Display::new(window_builder, context_builder, &event_loop).unwrap();
+    let program = glium::Program::from_source(&display, vertex_shader(), fragment_shader(), None).unwrap();
 
-    let image = image::load(Cursor::new(&include_bytes!("/Users/ltorb/Downloads/tuto-14-diffuse.jpeg")),
+    let image = image::load(Cursor::new(&include_bytes!("../resources/tuto-14-diffuse.jpeg")),
                             image::ImageFormat::Jpeg).unwrap().to_rgba8();
     let image_dimensions = image.dimensions();
     let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
     let diffuse_texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
 
-    let image = image::load(Cursor::new(&include_bytes!("/Users/ltorb/Downloads/tuto-14-normal.png")),
+    let image = image::load(Cursor::new(&include_bytes!("../resources/tuto-14-normal.png")),
                             image::ImageFormat::Png).unwrap().to_rgba8();
     let image_dimensions = image.dimensions();
     let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
@@ -39,13 +38,13 @@ fn main() {
     };
 
     let shape = glium::vertex::VertexBuffer::new(&display, &[
-        Vertex { position: [-1.0, 1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [0.0, 1.0]},
-        Vertex { position: [1.0, 1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [1.0, 1.0]},
-        Vertex { position: [-1.0, -1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [0.0, 0.0]},
-        Vertex { position: [1.0, -1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [1.0, 0.0]},
+        Vertex { position: [-1.0, 1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [0.0, 1.0] },
+        Vertex { position: [1.0, 1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [1.0, 1.0] },
+        Vertex { position: [-1.0, -1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [0.0, 0.0] },
+        Vertex { position: [1.0, -1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [1.0, 0.0] },
     ]).unwrap();
 
-    let (mut x_view, mut y_view) = (-1.0, 0.0);
+    let (mut x_view, mut y_view) = (1.0, 0.0);
     event_loop.run(move |event, _, control_flow| {
         let next_frame_time = std::time::Instant::now() +
             std::time::Duration::from_nanos(16_666_667);
@@ -65,7 +64,7 @@ fn main() {
                 _ => return,
             },
             glutin::event::Event::DeviceEvent { event: MouseMotion { delta: (x, y) }, .. } => {
-                x_view += x as f32 / 100.;
+                x_view -= x as f32 / 100.;
                 y_view += y as f32 / 100.;
             }
             _ => return,
@@ -79,7 +78,7 @@ fn main() {
             [0.0, 0.0, 0.0, 1.0f32]
         ];
 
-        let view = view_matrix(&[x_view, y_view, 2.0], &[0.5, 0.0, -1.0], &[0.0, 1.0, 0.0]);
+        let view = view_matrix(&[x_view, y_view, -2.0], &[0.5, 0.0, 1.0], &[0.0, 1.0, 0.0]);
 
         let perspective = {
             let (width, height) = target.get_dimensions();
@@ -99,11 +98,11 @@ fn main() {
             ]
         };
 
-        let light = [-1.0, 0.4, 0.9f32];
+        let light = [1.0, 0.0, 2f32];
 
         target.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
         target.draw(&shape, glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip), &program,
-                    &uniform! { model: model, view: view, perspective: perspective, u_light: light, diffuse_tex: &diffuse_texture },
+                    &uniform! { model: model, view: view, perspective: perspective, u_light: light, diffuse_tex: &diffuse_texture, normal_tex: &normal_map },
                     &params).unwrap();
         target.finish().unwrap();
     });
